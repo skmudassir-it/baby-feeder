@@ -39,7 +39,7 @@ async function proxy(
   path: string[],
   method: string
 ): Promise<NextResponse> {
-  const url = `${BACKEND_URL}/${path.join("/")}`;
+  const url = `${BACKEND_URL}/api/${path.join("/")}`;
   const headers: Record<string, string> = {};
 
   if (req.headers.get("content-type")) {

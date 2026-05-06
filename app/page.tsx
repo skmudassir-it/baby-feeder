@@ -12,7 +12,7 @@ async function api(path: string, options: RequestInit = {}) {
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
 
-  const res = await fetch(`https://173.249.10.236/api/${path}`, {
+  const res = await fetch(`/api/proxy/${path}`, {
     ...options,
     headers: { ...headers, ...(options.headers as Record<string, string> || {}) },
   });
