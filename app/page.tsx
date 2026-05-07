@@ -976,11 +976,24 @@ function SettingsView({ user, childList, refresh }: { user: User; childList: Chi
   const [cGender, setCGender] = useState("");
   const [msg, setMsg] = useState(""); const [saving, setSaving] = useState(false);
 
+  const startEditMom = async () => {
+    setEditing("mom");
+    // Load current mom profile
+    const p = await api("users/profile/mom");
+    const u = await api(`users/${user.id}`);
+    setMomName(u.name || user.name);
+    setMomPhone(u.phone || "");
+    setMomDob(p.dob || "");
+    setMomHt(p.height_cm ? String(p.height_cm) : "");
+    setMomWt(p.pre_pregnancy_weight_kg ? String(p.pre_pregnancy_weight_kg) : "");
+    setMomBt(p.blood_type || "");
+  };
+
   const saveMom = async () => {
     setSaving(true); setMsg("");
     await api(`users/${user.id}`, { method: "PUT", body: JSON.stringify({ name: momName, phone: momPhone }) });
     await api("users/profile/mom", { method: "POST", body: JSON.stringify({ dob: momDob, height_cm: momHt ? parseFloat(momHt) : null, pre_pregnancy_weight_kg: momWt ? parseFloat(momWt) : null, blood_type: momBt }) });
-    setMsg("Saved!"); setSaving(false); setEditing(null);
+    setMsg("Saved!"); setSaving(false); setEditing(null); refresh();
   };
 
   const startEditChild = (c: Child) => { setEditChildId(c.id); setCName(c.name); setCBday(c.birth_date || ""); setCGender(c.gender || ""); setEditing("child"); };
@@ -1007,7 +1020,7 @@ function SettingsView({ user, childList, refresh }: { user: User; childList: Chi
       <div className="card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><Heart size={18} fill="#ec4899" color="#ec4899" /> Mom</h3>
-          <button onClick={() => setEditing(editing === "mom" ? null : "mom")} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: "0.9em", fontWeight: 600 }}>
+          <button onClick={() => editing === "mom" ? setEditing(null) : startEditMom()} style={{ background: "none", border: "none", color: "#6366f1", cursor: "pointer", fontSize: "0.9em", fontWeight: 600 }}>
             {editing === "mom" ? "Cancel" : "Edit"}
           </button>
         </div>
