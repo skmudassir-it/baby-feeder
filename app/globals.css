@@ -160,6 +160,69 @@ body {
   cursor: pointer;
 }
 
+/* ─── DateTime Inputs ─────────────────────────── */
+.input-group input[type="datetime-local"],
+.input-group input[type="date"] {
+  min-height: 44px;
+  color-scheme: light;
+  padding-right: 10px;
+  -webkit-appearance: none;
+  position: relative;
+}
+
+/* Style the text inside datetime fields */
+.input-group input[type="datetime-local"]::-webkit-datetime-edit,
+.input-group input[type="date"]::-webkit-datetime-edit {
+  color: #1e293b;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95em;
+  padding: 0;
+}
+
+.input-group input[type="datetime-local"]::-webkit-datetime-edit-fields-wrapper,
+.input-group input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  padding: 0;
+}
+
+.input-group input[type="datetime-local"]::-webkit-datetime-edit-text,
+.input-group input[type="date"]::-webkit-datetime-edit-text {
+  color: #94a3b8;
+  padding: 0 2px;
+}
+
+.input-group input[type="datetime-local"]::-webkit-datetime-edit-day-field:focus,
+.input-group input[type="datetime-local"]::-webkit-datetime-edit-month-field:focus,
+.input-group input[type="datetime-local"]::-webkit-datetime-edit-year-field:focus,
+.input-group input[type="datetime-local"]::-webkit-datetime-edit-hour-field:focus,
+.input-group input[type="datetime-local"]::-webkit-datetime-edit-minute-field:focus,
+.input-group input[type="date"]::-webkit-datetime-edit-day-field:focus,
+.input-group input[type="date"]::-webkit-datetime-edit-month-field:focus,
+.input-group input[type="date"]::-webkit-datetime-edit-year-field:focus {
+  background: #eef2ff;
+  color: #6366f1;
+  border-radius: 3px;
+}
+
+/* Calendar/clock picker indicator icon */
+.input-group input[type="datetime-local"]::-webkit-calendar-picker-indicator,
+.input-group input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  filter: invert(0.5);
+  padding: 4px;
+  margin-left: 4px;
+}
+
+.input-group input[type="datetime-local"]::-webkit-calendar-picker-indicator:hover,
+.input-group input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Fix for empty datetime fields showing placeholder */
+.input-group input[type="datetime-local"]:not(:focus):not(:valid)::-webkit-datetime-edit {
+  color: #94a3b8;
+}
+
 .row { display: flex; gap: 10px; }
 .row .input-group { flex: 1; }
 
