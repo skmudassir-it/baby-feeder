@@ -25,13 +25,14 @@ async function api(path: string, options: RequestInit = {}) {
 // TYPES
 // ═══════════════════════════════════════════════
 
-interface User { id: number; email: string; name: string; baby_name: string; }
+interface User { id: number; email: string; name: string; role: string; baby_name: string; }
 interface Child { id: number; name: string; birth_date: string; gender: string; }
 interface AppData {
   user: User; children: Child[];
   feedings: any[]; growth: any[]; sleep: any[]; diapers: any[];
   temps: any[]; vax: any[]; milestones: any[];
   dashboard: any;
+  mom_profile?: any; pregnancy?: any;
 }
 
 // ═══════════════════════════════════════════════
@@ -61,8 +62,8 @@ function AuthScreen({ onLogin }: { onLogin: (data: AppData) => void }) {
   return (
     <div className="container" style={{ display: "flex", flexDirection: "column", justifyContent: "center", minHeight: "100vh" }}>
       <div style={{ textAlign: "center", padding: "20px 0" }}>
-        <h1 style={{ fontSize: "1.9em", fontWeight: 800, background: "linear-gradient(135deg, #6366f1, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>🍼 Baby Tracker</h1>
-        <p style={{ fontSize: "0.85em", color: "#94a3b8", marginTop: 4 }}>Complete baby care companion</p>
+        <h1 style={{ fontSize: "1.9em", fontWeight: 800, background: "linear-gradient(135deg, #f472b6, #a855f7)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>🤰 Mom & Baby Care</h1>
+        <p style={{ fontSize: "0.85em", color: "#94a3b8", marginTop: 4 }}>Complete maternal & infant health companion</p>
       </div>
       <div className="auth-tabs">
         <button className={mode === "login" ? "active" : ""} onClick={() => { setMode("login"); setError(""); }}>Login</button>
@@ -95,9 +96,10 @@ const NAV = [
   { key: "sleep", icon: "😴", label: "Sleep" },
   { key: "growth", icon: "📏", label: "Growth" },
   { key: "diaper", icon: "💩", label: "Diaper" },
-  { key: "temp", icon: "🌡️", label: "Temperature" },
+  { key: "temp", icon: "🌡️", label: "Temp" },
   { key: "vax", icon: "💉", label: "Vaccines" },
   { key: "milestones", icon: "🎯", label: "Milestones" },
+  { key: "mom", icon: "🤰", label: "Mom Care" },
 ] as const;
 type NavKey = typeof NAV[number]["key"];
 
@@ -135,14 +137,12 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
   const [showAddChild, setShowAddChild] = useState(false);
   const [newChildName, setNewChildName] = useState("");
   const [deleteConfirm, setDeleteConfirm] = useState<Child | null>(null);
+  const [momTab, setMomTab] = useState<"cycle" | "precon" | "pregnancy" | "postpartum">("cycle");
   const sidebarRef = useRef<HTMLDivElement>(null);
 
-  // Close sidebar on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (sidebarOpen && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
-        setSidebarOpen(false);
-      }
+      if (sidebarOpen && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) setSidebarOpen(false);
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -152,14 +152,16 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
 
   const d = data.dashboard || {};
   const t = d.today || {};
+  const mom = data.mom_profile || {};
+  const preg = data.pregnancy || {};
 
-  // ─── Form States ──────────────────────────
-  const [feedType, setFeedType] = useState<"milk" | "food">("milk");
+  // ─── Form States (Baby modules) ────────────
+  const [feedType, setFeedType] = useState<"breast" | "bottle" | "food">("bottle");
   const [foodName, setFoodName] = useState("");
-  const [feedQty, setFeedQty] = useState("");
-  const [feedUnit, setFeedUnit] = useState("oz");
+  const [feedQty, setFeedQty] = useState(""); const [feedUnit, setFeedUnit] = useState("oz");
   const [feedTime, setFeedTime] = useState(() => new Date().toISOString().slice(0, 16));
   const [feedMsg, setFeedMsg] = useState(""); const [feedSaving, setFeedSaving] = useState(false);
+  const [brSide, setBrSide] = useState("");
 
   const [sleepType, setSleepType] = useState<"nap" | "nighttime">("nap");
   const [sleepStart, setSleepStart] = useState(() => new Date().toISOString().slice(0, 16));
@@ -189,14 +191,46 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
   const [msAge, setMsAge] = useState(""); const [msDate, setMsDate] = useState("");
   const [msMsg, setMsMsg] = useState(""); const [msSaving, setMsSaving] = useState(false);
 
-  // ─── Save Handlers ────────────────────────
+  // ─── Form States (Mom modules) ─────────────
+  // Cycle
+  const [cycleStart, setCycleStart] = useState(""); const [cycleEnd, setCycleEnd] = useState("");
+  const [cycleFlow, setCycleFlow] = useState("medium"); const [cycleSymptoms, setCycleSymptoms] = useState("");
+  const [cycleMsg, setCycleMsg] = useState(""); const [cycleSaving, setCycleSaving] = useState(false);
+  // Preconception
+  const [suppName, setSuppName] = useState(""); const [suppDosage, setSuppDosage] = useState("");
+  const [suppMsg, setSuppMsg] = useState(""); const [suppSaving, setSuppSaving] = useState(false);
+  const [mealType, setMealType] = useState("breakfast"); const [mealFood, setMealFood] = useState("");
+  const [mealCal, setMealCal] = useState(""); const [mealMsg, setMealMsg] = useState(""); const [mealSaving, setMealSaving] = useState(false);
+  const [pcSleepStart, setPcSleepStart] = useState(""); const [pcSleepEnd, setPcSleepEnd] = useState("");
+  const [pcSleepQual, setPcSleepQual] = useState("good"); const [pcSleepMsg, setPcSleepMsg] = useState(""); const [pcSleepSaving, setPcSleepSaving] = useState(false);
+  const [exActivity, setExActivity] = useState(""); const [exDuration, setExDuration] = useState(""); const [exIntensity, setExIntensity] = useState("medium");
+  const [exMsg, setExMsg] = useState(""); const [exSaving, setExSaving] = useState(false);
+  // Pregnancy
+  const [lmpDate, setLmpDate] = useState(""); const [pregMsg, setPregMsg] = useState(""); const [pregSaving, setPregSaving] = useState(false);
+  const [pregWeight, setPregWeight] = useState(""); const [pwMsg, setPwMsg] = useState(""); const [pwSaving, setPwSaving] = useState(false);
+  const [symptomName, setSymptomName] = useState(""); const [symptomSev, setSymptomSev] = useState("mild");
+  const [sympMsg, setSympMsg] = useState(""); const [sympSaving, setSympSaving] = useState(false);
+  const [bpSys, setBpSys] = useState(""); const [bpDia, setBpDia] = useState(""); const [bpMsg, setBpMsg] = useState(""); const [bpSaving, setBpSaving] = useState(false);
+  const [glucose, setGlucose] = useState(""); const [gluMsg, setGluMsg] = useState(""); const [gluSaving, setGluSaving] = useState(false);
+  const [kickSession, setKickSession] = useState<any>(null); const [kickCount, setKickCount] = useState(0);
+  // Postpartum
+  const [moodScore, setMoodScore] = useState(""); const [edinScore, setEdinScore] = useState("");
+  const [moodNotes, setMoodNotes] = useState(""); const [moodMsg, setMoodMsg] = useState(""); const [moodSaving, setMoodSaving] = useState(false);
+  const [recovBleed, setRecovBleed] = useState("light"); const [recovPain, setRecovPain] = useState("");
+  const [recovNotes, setRecovNotes] = useState(""); const [recovMsg, setRecovMsg] = useState(""); const [recovSaving, setRecovSaving] = useState(false);
+  const [medName, setMedName] = useState(""); const [medDosage, setMedDosage] = useState("");
+  const [medFreq, setMedFreq] = useState(""); const [medMsg, setMedMsg] = useState(""); const [medSaving, setMedSaving] = useState(false);
+  const [ppSleepStart, setPpSleepStart] = useState(""); const [ppSleepEnd, setPpSleepEnd] = useState("");
+  const [ppSleepQual, setPpSleepQual] = useState("fair"); const [ppSleepMsg, setPpSleepMsg] = useState(""); const [ppSleepSaving, setPpSleepSaving] = useState(false);
+
+  // ─── Save Handlers (Baby) ──────────────────
 
   const saveFeeding = async () => {
     if (!feedQty || parseFloat(feedQty) <= 0) { setFeedMsg("Valid quantity required"); return; }
     if (feedType === "food" && !foodName.trim()) { setFeedMsg("Food name required"); return; }
     setFeedSaving(true); setFeedMsg("");
-    const res = await api("feedings", { method: "POST", body: JSON.stringify({ feed_type: feedType, food_name: feedType === "food" ? foodName : null, quantity: parseFloat(feedQty), unit: feedUnit, feed_time: feedTime, child_name: child }) });
-    if (res.error) setFeedMsg(res.error); else { setFeedMsg("✅ Saved!"); setFeedQty(""); setFoodName(""); refresh(); }
+    const res = await api("feedings", { method: "POST", body: JSON.stringify({ feed_type: feedType, food_name: feedType === "food" ? foodName : null, quantity: parseFloat(feedQty), unit: feedUnit, feed_time: feedTime, child_name: child, breast_side: feedType === "breast" ? brSide : null }) });
+    if (res.error) setFeedMsg(res.error); else { setFeedMsg("✅ Saved!"); setFeedQty(""); setFoodName(""); setBrSide(""); refresh(); }
     setFeedSaving(false);
   };
 
@@ -246,6 +280,130 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
     const res = await api("milestones", { method: "POST", body: JSON.stringify({ milestone: msName, category: msCat, expected_age_months: msAge ? parseInt(msAge) : null, achieved_date: msDate || null, child_name: child }) });
     if (res.error) setMsMsg(res.error); else { setMsMsg("✅ Saved!"); setMsName(""); refresh(); }
     setMsSaving(false);
+  };
+
+  // ─── Save Handlers (Mom) ──────────────────
+
+  const saveCycle = async () => {
+    if (!cycleStart) { setCycleMsg("Start date required"); return; }
+    setCycleSaving(true); setCycleMsg("");
+    const res = await api("preconception/cycle", { method: "POST", body: JSON.stringify({ start_date: cycleStart, end_date: cycleEnd || null, flow_intensity: cycleFlow, symptoms: cycleSymptoms }) });
+    if (res.error) setCycleMsg(res.error); else { setCycleMsg("✅ Saved!"); setCycleStart(""); setCycleEnd(""); refresh(); }
+    setCycleSaving(false);
+  };
+
+  const saveSupp = async () => {
+    if (!suppName.trim()) { setSuppMsg("Supplement name required"); return; }
+    setSuppSaving(true); setSuppMsg("");
+    const res = await api("preconception/supplements", { method: "POST", body: JSON.stringify({ supplement_name: suppName, dosage: suppDosage }) });
+    if (res.error) setSuppMsg(res.error); else { setSuppMsg("✅ Saved!"); setSuppName(""); setSuppDosage(""); }
+    setSuppSaving(false);
+  };
+
+  const saveMeal = async () => {
+    if (!mealFood.trim()) { setMealMsg("Food description required"); return; }
+    setMealSaving(true); setMealMsg("");
+    const res = await api("preconception/nutrition", { method: "POST", body: JSON.stringify({ meal_type: mealType, food_items: mealFood, calories: mealCal ? parseFloat(mealCal) : null }) });
+    if (res.error) setMealMsg(res.error); else { setMealMsg("✅ Saved!"); setMealFood(""); setMealCal(""); }
+    setMealSaving(false);
+  };
+
+  const savePCSleep = async () => {
+    if (!pcSleepStart || !pcSleepEnd) { setPcSleepMsg("Start and end time required"); return; }
+    setPcSleepSaving(true); setPcSleepMsg("");
+    const res = await api("preconception/sleep", { method: "POST", body: JSON.stringify({ start_time: pcSleepStart, end_time: pcSleepEnd, quality: pcSleepQual }) });
+    if (res.error) setPcSleepMsg(res.error); else { setPcSleepMsg("✅ Saved!"); }
+    setPcSleepSaving(false);
+  };
+
+  const saveEx = async () => {
+    if (!exActivity.trim()) { setExMsg("Activity required"); return; }
+    setExSaving(true); setExMsg("");
+    const res = await api("preconception/exercise", { method: "POST", body: JSON.stringify({ activity: exActivity, duration_minutes: exDuration ? parseInt(exDuration) : null, intensity: exIntensity }) });
+    if (res.error) setExMsg(res.error); else { setExMsg("✅ Saved!"); setExActivity(""); setExDuration(""); }
+    setExSaving(false);
+  };
+
+  const startPregnancy = async () => {
+    if (!lmpDate) { setPregMsg("LMP date required"); return; }
+    setPregSaving(true); setPregMsg("");
+    const res = await api("pregnancy/start", { method: "POST", body: JSON.stringify({ lmp_date: lmpDate }) });
+    if (res.error) setPregMsg(res.error); else { setPregMsg(`✅ Pregnancy started! Week ${res.gestational_age_weeks}`); refresh(); }
+    setPregSaving(false);
+  };
+
+  const savePregWeight = async () => {
+    if (!pregWeight || parseFloat(pregWeight) <= 0) { setPwMsg("Valid weight required"); return; }
+    setPwSaving(true); setPwMsg("");
+    const res = await api("pregnancy/weight", { method: "POST", body: JSON.stringify({ weight_kg: parseFloat(pregWeight) }) });
+    if (res.error) setPwMsg(res.error); else { setPwMsg("✅ Saved!"); setPregWeight(""); refresh(); }
+    setPwSaving(false);
+  };
+
+  const saveSymptom = async () => {
+    if (!symptomName.trim()) { setSympMsg("Symptom required"); return; }
+    setSympSaving(true); setSympMsg("");
+    const res = await api("pregnancy/symptoms", { method: "POST", body: JSON.stringify({ symptom: symptomName, severity: symptomSev }) });
+    if (res.error) setSympMsg(res.error); else { setSympMsg("✅ Saved!"); setSymptomName(""); }
+    setSympSaving(false);
+  };
+
+  const saveBP = async () => {
+    if (!bpSys || !bpDia) { setBpMsg("Systolic and diastolic required"); return; }
+    setBpSaving(true); setBpMsg("");
+    const res = await api("pregnancy/vitals/bp", { method: "POST", body: JSON.stringify({ systolic: parseInt(bpSys), diastolic: parseInt(bpDia) }) });
+    if (res.error) setBpMsg(res.error); else { setBpMsg("✅ Saved!"); setBpSys(""); setBpDia(""); }
+    setBpSaving(false);
+  };
+
+  const saveGlucose = async () => {
+    if (!glucose) { setGluMsg("Glucose value required"); return; }
+    setGluSaving(true); setGluMsg("");
+    const res = await api("pregnancy/vitals/glucose", { method: "POST", body: JSON.stringify({ glucose_mgdl: parseFloat(glucose) }) });
+    if (res.error) setGluMsg(res.error); else { setGluMsg("✅ Saved!"); setGlucose(""); }
+    setGluSaving(false);
+  };
+
+  const startKicks = async () => {
+    const res = await api("pregnancy/kicks/session", { method: "POST" });
+    if (!res.error) { setKickSession(res); setKickCount(0); }
+  };
+
+  const logKick = async () => {
+    if (!kickSession) return;
+    await api("pregnancy/kicks/log", { method: "POST", body: JSON.stringify({ session_id: kickSession.id }) });
+    setKickCount(c => c + 1);
+  };
+
+  const saveMood = async () => {
+    if (!moodScore) { setMoodMsg("Mood score required (1-10)"); return; }
+    setMoodSaving(true); setMoodMsg("");
+    const res = await api("postpartum/mood", { method: "POST", body: JSON.stringify({ mood_score: parseInt(moodScore), edinburgh_score: edinScore ? parseInt(edinScore) : null, notes: moodNotes }) });
+    if (res.error) setMoodMsg(res.error); else { setMoodMsg("✅ Saved!"); setMoodScore(""); setEdinScore(""); setMoodNotes(""); }
+    setMoodSaving(false);
+  };
+
+  const saveRecovery = async () => {
+    setRecovSaving(true); setRecovMsg("");
+    const res = await api("postpartum/recovery", { method: "POST", body: JSON.stringify({ bleeding_level: recovBleed, pain_level: recovPain ? parseInt(recovPain) : null, notes: recovNotes }) });
+    if (res.error) setRecovMsg(res.error); else { setRecovMsg("✅ Saved!"); setRecovNotes(""); }
+    setRecovSaving(false);
+  };
+
+  const saveMed = async () => {
+    if (!medName.trim()) { setMedMsg("Medication name required"); return; }
+    setMedSaving(true); setMedMsg("");
+    const res = await api("postpartum/medication", { method: "POST", body: JSON.stringify({ medication_name: medName, dosage: medDosage, frequency: medFreq }) });
+    if (res.error) setMedMsg(res.error); else { setMedMsg("✅ Saved!"); setMedName(""); setMedDosage(""); setMedFreq(""); }
+    setMedSaving(false);
+  };
+
+  const savePPSleep = async () => {
+    if (!ppSleepStart || !ppSleepEnd) { setPpSleepMsg("Start and end time required"); return; }
+    setPpSleepSaving(true); setPpSleepMsg("");
+    const res = await api("postpartum/sleep", { method: "POST", body: JSON.stringify({ start_time: ppSleepStart, end_time: ppSleepEnd, quality: ppSleepQual }) });
+    if (res.error) setPpSleepMsg(res.error); else { setPpSleepMsg("✅ Saved!"); }
+    setPpSleepSaving(false);
   };
 
   const addChild = async () => {
@@ -303,7 +461,7 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
       <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
       <div className={`sidebar ${sidebarOpen ? "open" : ""}`} ref={sidebarRef}>
         <div className="sidebar-header">
-          <h2>🍼 Baby Tracker</h2>
+          <h2>🤰 Mom & Baby</h2>
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)}>✕</button>
         </div>
         <div className="sidebar-nav">
@@ -314,9 +472,7 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
             </button>
           ))}
         </div>
-        <div className="sidebar-footer">
-          {data.user.name} • {data.children.length} child{data.children.length !== 1 ? "ren" : ""}
-        </div>
+        <div className="sidebar-footer">{data.user.name} • {data.children.length} child{data.children.length !== 1 ? "ren" : ""}</div>
       </div>
 
       <div className="container">
@@ -324,7 +480,7 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
         <div className="header">
           <div className="header-left">
             <button className="hamburger" onClick={() => setSidebarOpen(true)}>☰</button>
-            <h1>Baby Tracker</h1>
+            <h1>Mom & Baby Care</h1>
           </div>
           <button className="logout-btn" onClick={onLogout}>Logout</button>
         </div>
@@ -393,6 +549,15 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
                 ))}
               </div>
             )}
+            {preg.id && (
+              <div className="card">
+                <h3>🤰 Pregnancy Status</h3>
+                <div className="stats-row">
+                  <div className="stat-box"><span className="stat-value">{preg.gestational_age_weeks}w</span><span className="stat-label">Gestational Age</span></div>
+                  <div className="stat-box"><span className="stat-value">{preg.due_date}</span><span className="stat-label">Due Date</span></div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -402,9 +567,17 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
             <div className="card">
               <h3>🍽 Log Feeding</h3>
               <div className="toggle-group">
-                <button className={feedType === "milk" ? "active" : ""} onClick={() => setFeedType("milk")}>🍼 Milk</button>
+                <button className={feedType === "breast" ? "active" : ""} onClick={() => setFeedType("breast")}>🤱 Breast</button>
+                <button className={feedType === "bottle" ? "active" : ""} onClick={() => setFeedType("bottle")}>🍼 Bottle</button>
                 <button className={feedType === "food" ? "active" : ""} onClick={() => setFeedType("food")}>🥣 Food</button>
               </div>
+              {feedType === "breast" && (
+                <div className="input-group"><label>Side</label>
+                  <select value={brSide} onChange={e => setBrSide(e.target.value)}>
+                    <option value="">Both</option><option value="left">Left</option><option value="right">Right</option>
+                  </select>
+                </div>
+              )}
               {feedType === "food" && <div className="input-group"><label>What food?</label><input type="text" placeholder="e.g. Banana puree" value={foodName} onChange={e => setFoodName(e.target.value)} /></div>}
               <div className="row">
                 <div className="input-group"><label>Quantity</label><input type="number" step="0.1" min="0" placeholder="0" value={feedQty} onChange={e => setFeedQty(e.target.value)} /></div>
@@ -417,9 +590,9 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
             {(data.feedings || []).slice(0, 20).map((f: any) => (
               <div className="card" key={f.id} style={{ padding: 12 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div className={`feed-icon ${f.feed_type}`}>{f.feed_type === "milk" ? "🍼" : "🥣"}</div>
+                  <div className={`feed-icon ${f.feed_type}`}>{f.feed_type === "breast" ? "🤱" : f.feed_type === "bottle" ? "🍼" : "🥣"}</div>
                   <div className="feed-details">
-                    <div className="feed-type">{f.feed_type === "milk" ? "Milk" : f.food_name || "Food"}{f.child_name ? ` • 👶 ${f.child_name}` : ""}</div>
+                    <div className="feed-type">{f.feed_type === "breast" ? `Breast ${f.breast_side || ""}` : f.feed_type === "bottle" ? "Bottle" : f.food_name || "Food"}{f.child_name ? ` • 👶 ${f.child_name}` : ""}</div>
                     <div className="feed-meta">{new Date(f.feed_time).toLocaleString()}</div>
                   </div>
                   <div className="feed-qty">{f.quantity} {f.unit}</div>
@@ -634,9 +807,7 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
             {(data.vax || []).map((v: any) => (
               <div className="card" key={v.id} style={{ padding: 12, opacity: v.administered_date ? 0.65 : 1 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                  <div className="feed-icon" style={{ background: v.administered_date ? "#dcfce7" : "#fee2e2" }}>
-                    {v.administered_date ? "✅" : "📅"}
-                  </div>
+                  <div className="feed-icon" style={{ background: v.administered_date ? "#dcfce7" : "#fee2e2" }}>{v.administered_date ? "✅" : "📅"}</div>
                   <div className="feed-details">
                     <div className="feed-type">{v.vaccine_name} (Dose {v.dose_number}){v.child_name ? ` • 👶 ${v.child_name}` : ""}</div>
                     <div className="feed-meta">{v.administered_date ? `✅ Done: ${v.administered_date}` : `📅 Due: ${v.scheduled_date}`}</div>
@@ -655,7 +826,7 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
           <div>
             <div className="card">
               <h3>🎯 Log Milestone</h3>
-              <div className="input-group"><label>Milestone</label><input type="text" placeholder="e.g. First smile, Rolling over" value={msName} onChange={e => setMsName(e.target.value)} /></div>
+              <div className="input-group"><label>Milestone</label><input type="text" placeholder="e.g. First smile" value={msName} onChange={e => setMsName(e.target.value)} /></div>
               <div className="row">
                 <div className="input-group"><label>Category</label><select value={msCat} onChange={e => setMsCat(e.target.value)}><option value="motor">Motor</option><option value="cognitive">Cognitive</option><option value="social">Social</option><option value="language">Language</option></select></div>
                 <div className="input-group"><label>Expected (mo)</label><input type="number" min="0" placeholder="e.g. 3" value={msAge} onChange={e => setMsAge(e.target.value)} /></div>
@@ -673,7 +844,7 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
                   <div className="feed-details">
                     <div className="feed-type">{m.milestone}{m.child_name ? ` • 👶 ${m.child_name}` : ""}</div>
                     <div className="feed-meta">
-                      {m.achieved_date ? `✅ Achieved: ${m.achieved_date}` : `Expected: ${m.expected_age_months}mo`}
+                      {m.achieved_date ? `✅ ${m.achieved_date}` : `Expected: ${m.expected_age_months}mo`}
                       <span style={{ marginLeft: 8, fontSize: "0.85em", color: "#94a3b8", textTransform: "capitalize" }}>{m.category}</span>
                     </div>
                   </div>
@@ -682,13 +853,211 @@ function Dashboard({ data, onLogout, refresh, child, setChild }: {
             ))}
           </div>
         )}
+
+        {/* ─── MOM CARE ─────────────────────── */}
+        {activeTab === "mom" && (
+          <div>
+            {/* Mom sub-tabs */}
+            <div className="toggle-group" style={{ marginBottom: 16 }}>
+              <button className={momTab === "cycle" ? "active" : ""} onClick={() => setMomTab("cycle")}>📅 Cycle</button>
+              <button className={momTab === "precon" ? "active" : ""} onClick={() => setMomTab("precon")}>💊 Pre-Con</button>
+              <button className={momTab === "pregnancy" ? "active" : ""} onClick={() => setMomTab("pregnancy")}>🤰 Pregnancy</button>
+              <button className={momTab === "postpartum" ? "active" : ""} onClick={() => setMomTab("postpartum")}>🌸 Postpartum</button>
+            </div>
+
+            {/* ─── CYCLE TRACKING ──────────── */}
+            {momTab === "cycle" && (
+              <div>
+                <div className="card">
+                  <h3>📅 Log Menstrual Cycle</h3>
+                  <div className="row">
+                    <div className="input-group"><label>Start Date</label><input type="date" value={cycleStart} onChange={e => setCycleStart(e.target.value)} /></div>
+                    <div className="input-group"><label>End Date</label><input type="date" value={cycleEnd} onChange={e => setCycleEnd(e.target.value)} /></div>
+                  </div>
+                  <div className="row">
+                    <div className="input-group"><label>Flow</label><select value={cycleFlow} onChange={e => setCycleFlow(e.target.value)}><option value="light">Light</option><option value="medium">Medium</option><option value="heavy">Heavy</option></select></div>
+                    <div className="input-group"><label>Symptoms</label><input type="text" placeholder="Cramps, headache..." value={cycleSymptoms} onChange={e => setCycleSymptoms(e.target.value)} /></div>
+                  </div>
+                  {cycleMsg && <div className={cycleMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{cycleMsg}</div>}
+                  <button className="btn btn-primary" onClick={saveCycle} disabled={cycleSaving}>{cycleSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+                <div className="card">
+                  <h3>🔮 Ovulation Prediction</h3>
+                  <p style={{ color: "#94a3b8", fontSize: "0.85em" }}>Based on your logged cycles. Log at least 1 cycle to get predictions.</p>
+                  {/* Could fetch ovulation data here */}
+                </div>
+              </div>
+            )}
+
+            {/* ─── PRE-CONCEPTION ──────────── */}
+            {momTab === "precon" && (
+              <div>
+                <div className="card">
+                  <h3>💊 Daily Supplements</h3>
+                  <div className="row">
+                    <div className="input-group" style={{ flex: 2 }}><label>Supplement</label><input type="text" placeholder="e.g. Folic Acid" value={suppName} onChange={e => setSuppName(e.target.value)} /></div>
+                    <div className="input-group" style={{ flex: 1 }}><label>Dosage</label><input type="text" placeholder="e.g. 400mcg" value={suppDosage} onChange={e => setSuppDosage(e.target.value)} /></div>
+                  </div>
+                  {suppMsg && <div className={suppMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{suppMsg}</div>}
+                  <button className="btn btn-primary" onClick={saveSupp} disabled={suppSaving}>{suppSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+                <div className="card">
+                  <h3>🍽 Nutrition</h3>
+                  <div className="input-group"><label>Meal Type</label><select value={mealType} onChange={e => setMealType(e.target.value)}><option value="breakfast">Breakfast</option><option value="lunch">Lunch</option><option value="dinner">Dinner</option><option value="snack">Snack</option></select></div>
+                  <div className="row">
+                    <div className="input-group" style={{ flex: 2 }}><label>Food Items</label><input type="text" placeholder="e.g. Oatmeal with berries" value={mealFood} onChange={e => setMealFood(e.target.value)} /></div>
+                    <div className="input-group" style={{ flex: 1 }}><label>Calories</label><input type="number" placeholder="e.g. 350" value={mealCal} onChange={e => setMealCal(e.target.value)} /></div>
+                  </div>
+                  {mealMsg && <div className={mealMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{mealMsg}</div>}
+                  <button className="btn btn-primary" onClick={saveMeal} disabled={mealSaving}>{mealSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+                <div className="card">
+                  <h3>😴 Sleep</h3>
+                  <div className="row">
+                    <div className="input-group"><label>Bed Time</label><input type="datetime-local" value={pcSleepStart} onChange={e => setPcSleepStart(e.target.value)} /></div>
+                    <div className="input-group"><label>Wake Time</label><input type="datetime-local" value={pcSleepEnd} onChange={e => setPcSleepEnd(e.target.value)} /></div>
+                  </div>
+                  <div className="input-group"><label>Quality</label><select value={pcSleepQual} onChange={e => setPcSleepQual(e.target.value)}><option value="poor">Poor</option><option value="fair">Fair</option><option value="good">Good</option><option value="excellent">Excellent</option></select></div>
+                  {pcSleepMsg && <div className={pcSleepMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{pcSleepMsg}</div>}
+                  <button className="btn btn-primary" onClick={savePCSleep} disabled={pcSleepSaving}>{pcSleepSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+                <div className="card">
+                  <h3>🏃 Exercise</h3>
+                  <div className="input-group"><label>Activity</label><input type="text" placeholder="e.g. Walking, Swimming" value={exActivity} onChange={e => setExActivity(e.target.value)} /></div>
+                  <div className="row">
+                    <div className="input-group"><label>Duration (min)</label><input type="number" placeholder="30" value={exDuration} onChange={e => setExDuration(e.target.value)} /></div>
+                    <div className="input-group"><label>Intensity</label><select value={exIntensity} onChange={e => setExIntensity(e.target.value)}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div>
+                  </div>
+                  {exMsg && <div className={exMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{exMsg}</div>}
+                  <button className="btn btn-primary" onClick={saveEx} disabled={exSaving}>{exSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+              </div>
+            )}
+
+            {/* ─── PREGNANCY ──────────── */}
+            {momTab === "pregnancy" && (
+              <div>
+                {!preg.id && (
+                  <div className="card">
+                    <h3>🤰 Confirm Pregnancy</h3>
+                    <p style={{ color: "#94a3b8", fontSize: "0.85em", marginBottom: 12 }}>Enter your last menstrual period date to start pregnancy tracking.</p>
+                    <div className="input-group"><label>Last Menstrual Period</label><input type="date" value={lmpDate} onChange={e => setLmpDate(e.target.value)} /></div>
+                    {pregMsg && <div className={pregMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{pregMsg}</div>}
+                    <button className="btn btn-primary" onClick={startPregnancy} disabled={pregSaving}>{pregSaving ? "Starting..." : "🤰 Start Pregnancy"}</button>
+                  </div>
+                )}
+                {preg.id && (
+                  <>
+                    <div className="card">
+                      <h3>📊 Pregnancy Status</h3>
+                      <div className="stats-row">
+                        <div className="stat-box"><span className="stat-value">{preg.gestational_age_weeks}w</span><span className="stat-label">Weeks</span></div>
+                        <div className="stat-box"><span className="stat-value">{preg.due_date}</span><span className="stat-label">Due Date</span></div>
+                        <div className="stat-box"><span className="stat-value">{preg.gestational_age_weeks <= 13 ? "1st" : preg.gestational_age_weeks <= 27 ? "2nd" : "3rd"}</span><span className="stat-label">Trimester</span></div>
+                      </div>
+                    </div>
+                    <div className="card">
+                      <h3>⚖️ Log Weight</h3>
+                      <div className="input-group"><label>Weight (kg)</label><input type="number" step="0.1" placeholder="e.g. 65" value={pregWeight} onChange={e => setPregWeight(e.target.value)} /></div>
+                      {pwMsg && <div className={pwMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{pwMsg}</div>}
+                      <button className="btn btn-primary" onClick={savePregWeight} disabled={pwSaving}>{pwSaving ? "Saving..." : "💾 Save"}</button>
+                    </div>
+                    <div className="card">
+                      <h3>🤒 Log Symptoms</h3>
+                      <div className="row">
+                        <div className="input-group" style={{ flex: 2 }}><label>Symptom</label><input type="text" placeholder="e.g. Morning sickness" value={symptomName} onChange={e => setSymptomName(e.target.value)} /></div>
+                        <div className="input-group" style={{ flex: 1 }}><label>Severity</label><select value={symptomSev} onChange={e => setSymptomSev(e.target.value)}><option value="mild">Mild</option><option value="moderate">Moderate</option><option value="severe">Severe</option></select></div>
+                      </div>
+                      {sympMsg && <div className={sympMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{sympMsg}</div>}
+                      <button className="btn btn-primary" onClick={saveSymptom} disabled={sympSaving}>{sympSaving ? "Saving..." : "💾 Save"}</button>
+                    </div>
+                    <div className="card">
+                      <h3>🩺 Vitals</h3>
+                      <div className="row">
+                        <div className="input-group"><label>Systolic</label><input type="number" placeholder="120" value={bpSys} onChange={e => setBpSys(e.target.value)} /></div>
+                        <div className="input-group"><label>Diastolic</label><input type="number" placeholder="80" value={bpDia} onChange={e => setBpDia(e.target.value)} /></div>
+                      </div>
+                      {bpMsg && <div className={bpMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{bpMsg}</div>}
+                      <button className="btn btn-primary" onClick={saveBP} disabled={bpSaving}>{bpSaving ? "Saving..." : "💾 Log BP"}</button>
+                      <div style={{ marginTop: 16 }}>
+                        <div className="input-group"><label>Blood Glucose (mg/dL)</label><input type="number" placeholder="95" value={glucose} onChange={e => setGlucose(e.target.value)} /></div>
+                        {gluMsg && <div className={gluMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{gluMsg}</div>}
+                        <button className="btn btn-primary" onClick={saveGlucose} disabled={gluSaving}>{gluSaving ? "Saving..." : "💾 Log Glucose"}</button>
+                      </div>
+                    </div>
+                    {preg.gestational_age_weeks >= 24 && (
+                      <div className="card">
+                        <h3>🦶 Kick Counter</h3>
+                        {!kickSession ? (
+                          <button className="btn btn-primary" onClick={startKicks}>▶ Start Session</button>
+                        ) : (
+                          <div style={{ textAlign: "center" }}>
+                            <div style={{ fontSize: "3em", fontWeight: 800, color: "#6366f1" }}>{kickCount}</div>
+                            <div style={{ color: "#94a3b8", marginBottom: 12 }}>kicks counted</div>
+                            <button className="btn btn-primary" onClick={logKick}>👣 Log Kick</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {/* ─── POSTPARTUM ──────────── */}
+            {momTab === "postpartum" && (
+              <div>
+                <div className="card">
+                  <h3>😊 Daily Mood Check-In</h3>
+                  <div className="row">
+                    <div className="input-group"><label>Mood (1-10)</label><input type="number" min="1" max="10" placeholder="7" value={moodScore} onChange={e => setMoodScore(e.target.value)} /></div>
+                    <div className="input-group"><label>Edinburgh Score (0-30)</label><input type="number" min="0" max="30" placeholder="Optional" value={edinScore} onChange={e => setEdinScore(e.target.value)} /></div>
+                  </div>
+                  <div className="input-group"><label>Notes</label><input type="text" placeholder="How are you feeling?" value={moodNotes} onChange={e => setMoodNotes(e.target.value)} /></div>
+                  {moodMsg && <div className={moodMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{moodMsg}</div>}
+                  <button className="btn btn-primary" onClick={saveMood} disabled={moodSaving}>{moodSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+                <div className="card">
+                  <h3>🩹 Recovery</h3>
+                  <div className="row">
+                    <div className="input-group"><label>Bleeding</label><select value={recovBleed} onChange={e => setRecovBleed(e.target.value)}><option value="none">None</option><option value="light">Light</option><option value="moderate">Moderate</option><option value="heavy">Heavy</option></select></div>
+                    <div className="input-group"><label>Pain (0-10)</label><input type="number" min="0" max="10" placeholder="3" value={recovPain} onChange={e => setRecovPain(e.target.value)} /></div>
+                  </div>
+                  <div className="input-group"><label>Notes</label><input type="text" placeholder="Any concerns?" value={recovNotes} onChange={e => setRecovNotes(e.target.value)} /></div>
+                  {recovMsg && <div className={recovMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{recovMsg}</div>}
+                  <button className="btn btn-primary" onClick={saveRecovery} disabled={recovSaving}>{recovSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+                <div className="card">
+                  <h3>💊 Medication</h3>
+                  <div className="row">
+                    <div className="input-group"><label>Medication</label><input type="text" placeholder="e.g. Ibuprofen" value={medName} onChange={e => setMedName(e.target.value)} /></div>
+                    <div className="input-group"><label>Dosage</label><input type="text" placeholder="e.g. 400mg" value={medDosage} onChange={e => setMedDosage(e.target.value)} /></div>
+                  </div>
+                  <div className="input-group"><label>Frequency</label><input type="text" placeholder="e.g. Every 8 hours" value={medFreq} onChange={e => setMedFreq(e.target.value)} /></div>
+                  {medMsg && <div className={medMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{medMsg}</div>}
+                  <button className="btn btn-primary" onClick={saveMed} disabled={medSaving}>{medSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+                <div className="card">
+                  <h3>😴 Sleep</h3>
+                  <div className="row">
+                    <div className="input-group"><label>Bed Time</label><input type="datetime-local" value={ppSleepStart} onChange={e => setPpSleepStart(e.target.value)} /></div>
+                    <div className="input-group"><label>Wake Time</label><input type="datetime-local" value={ppSleepEnd} onChange={e => setPpSleepEnd(e.target.value)} /></div>
+                  </div>
+                  <div className="input-group"><label>Quality</label><select value={ppSleepQual} onChange={e => setPpSleepQual(e.target.value)}><option value="poor">Poor</option><option value="fair">Fair</option><option value="good">Good</option><option value="excellent">Excellent</option></select></div>
+                  {ppSleepMsg && <div className={ppSleepMsg.startsWith("✅") ? "success-msg" : "error-msg"}>{ppSleepMsg}</div>}
+                  <button className="btn btn-primary" onClick={savePPSleep} disabled={ppSleepSaving}>{ppSleepSaving ? "Saving..." : "💾 Save"}</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Delete Confirm Dialog */}
       {deleteConfirm && (
         <ConfirmDialog
           title="Delete Child"
-          message={`Are you sure you want to delete "${deleteConfirm.name}"? All associated data (feedings, sleep, growth, etc.) will remain in the database but won't be linked to this child anymore.`}
+          message={`Are you sure you want to delete "${deleteConfirm.name}"?`}
           onConfirm={deleteChild}
           onCancel={() => setDeleteConfirm(null)}
         />
@@ -708,27 +1077,24 @@ export default function Home() {
 
   const refresh = useCallback(async () => {
     if (!data?.user) return;
-    const childParam = child ? `?child=${encodeURIComponent(child)}` : "";
-    const [feedings, growth, sleep, diapers, temps, vax, milestones, dashboard, meData] = await Promise.all([
-      api(`feedings${childParam}`), api(`growth${childParam}`),
-      api(`sleep${childParam}`), api(`diaper${childParam}`),
-      api(`temperature${childParam}`), api(`vaccinations${childParam}`),
-      api(`milestones${childParam}`), api(`dashboard${childParam}`),
+    const [meData] = await Promise.all([
       api("me"),
     ]);
     setData(prev => prev ? {
       ...prev,
-      feedings: Array.isArray(feedings) ? feedings : [],
-      growth: Array.isArray(growth) ? growth : [],
-      sleep: Array.isArray(sleep) ? sleep : [],
-      diapers: Array.isArray(diapers) ? diapers : [],
-      temps: Array.isArray(temps) ? temps : [],
-      vax: Array.isArray(vax) ? vax : [],
-      milestones: Array.isArray(milestones) ? milestones : [],
-      dashboard,
+      feedings: meData.feedings || [],
+      growth: meData.growth || [],
+      sleep: meData.sleep || [],
+      diapers: meData.diapers || [],
+      temps: meData.temps || [],
+      vax: meData.vax || [],
+      milestones: meData.milestones || [],
+      dashboard: meData.dashboard || {},
       children: meData.children || prev.children,
+      mom_profile: meData.mom_profile || null,
+      pregnancy: meData.pregnancy || null,
     } : prev);
-  }, [child, data?.user]);
+  }, [data?.user]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -739,7 +1105,16 @@ export default function Home() {
           const children = meData.children || [];
           const defChild = children.length > 0 ? children[0].name : (u.baby_name || "");
           setChild(defChild);
-          setData({ user: u, children, feedings: [], growth: [], sleep: [], diapers: [], temps: [], vax: [], milestones: [], dashboard: {} });
+          setData({
+            user: u, children,
+            feedings: meData.feedings || [], growth: meData.growth || [],
+            sleep: meData.sleep || [], diapers: meData.diapers || [],
+            temps: meData.temps || [], vax: meData.vax || [],
+            milestones: meData.milestones || [],
+            dashboard: meData.dashboard || {},
+            mom_profile: meData.mom_profile || null,
+            pregnancy: meData.pregnancy || null,
+          });
         } else { localStorage.removeItem("token"); }
       }).catch(() => localStorage.removeItem("token")).finally(() => setLoading(false));
     } else { setLoading(false); }
@@ -747,7 +1122,7 @@ export default function Home() {
 
   useEffect(() => { if (data?.user) refresh(); }, [child]); // eslint-disable-line
 
-  if (loading) return <div className="container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}><div style={{ fontSize: "2em" }}>🍼</div></div>;
+  if (loading) return <div className="container" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}><div style={{ fontSize: "2em" }}>🤰</div></div>;
   if (!data) return <AuthScreen onLogin={(d) => { setData(d); if (d.children.length > 0 && !child) setChild(d.children[0].name); }} />;
   return <Dashboard data={data} onLogout={() => { localStorage.removeItem("token"); setData(null); }} refresh={refresh} child={child} setChild={setChild} />;
 }
