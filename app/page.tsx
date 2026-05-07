@@ -119,9 +119,11 @@ function AppShell({ user, children: initialChildren, onLogout }: {
   user: User; children: Child[]; onLogout: () => void;
 }) {
   type View = "dashboard" | "profiles" | "profile" | "settings";
+  type ProfileTab = "home" | "cycle" | "precon" | "pregnancy" | "postpartum" | "feed" | "sleep" | "growth" | "diaper" | "temp" | "vax" | "milestones";
   const [view, setView] = useState<View>("dashboard");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeProfile, setActiveProfile] = useState<ProfileData | null>(null);
+  const [profileTab, setProfileTab] = useState<ProfileTab>("home");
   const [overview, setOverview] = useState<OverviewData | null>(null);
   const [childList, setChildList] = useState<Child[]>(initialChildren);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -156,17 +158,34 @@ function AppShell({ user, children: initialChildren, onLogout }: {
       setActiveProfile({ type: "child", profile: child || {}, dashboard: d });
     }
     setView("profile");
+    setProfileTab("home");
     setSidebarOpen(false);
   };
 
   const goBack = () => { setView("profiles"); setActiveProfile(null); };
   const goDashboard = () => { setView("dashboard"); setSidebarOpen(false); loadOverview(); };
+  const selectTab = (t: ProfileTab) => { setProfileTab(t); setSidebarOpen(false); };
 
-  const sidebarItems = [
-    { icon: BarChart3, label: "Dashboard", view: "dashboard" as View, active: view === "dashboard", onClick: goDashboard },
-    { icon: Users, label: "Profiles", view: "profiles" as View, active: view === "profiles" || view === "profile", onClick: () => { setView("profiles"); setActiveProfile(null); setSidebarOpen(false); } },
-    { icon: Settings, label: "Settings", view: "settings" as View, active: view === "settings", onClick: () => { setView("settings"); setSidebarOpen(false); } },
+  // Build profile-specific sidebar tabs
+  const isMom = activeProfile?.type === "mom";
+  const momTabs: { key: ProfileTab; icon: any; label: string }[] = [
+    { key: "home", icon: HomeIcon, label: "Home" },
+    { key: "cycle", icon: Calendar, label: "Cycle" },
+    { key: "precon", icon: Pill, label: "Pre-Conception" },
+    { key: "pregnancy", icon: Heart, label: "Pregnancy" },
+    { key: "postpartum", icon: Flower2, label: "Postpartum" },
   ];
+  const childTabs: { key: ProfileTab; icon: any; label: string }[] = [
+    { key: "home", icon: HomeIcon, label: "Home" },
+    { key: "feed", icon: Baby, label: "Feeding" },
+    { key: "sleep", icon: Moon, label: "Sleep" },
+    { key: "growth", icon: Ruler, label: "Growth" },
+    { key: "diaper", icon: Droplets, label: "Diaper" },
+    { key: "temp", icon: Thermometer, label: "Temperature" },
+    { key: "vax", icon: Syringe, label: "Vaccines" },
+    { key: "milestones", icon: Target, label: "Milestones" },
+  ];
+  const profileTabs = isMom ? momTabs : childTabs;
 
   return (
     <>
@@ -179,12 +198,29 @@ function AppShell({ user, children: initialChildren, onLogout }: {
           <button className="sidebar-close" onClick={() => setSidebarOpen(false)}><X size={20} /></button>
         </div>
         <div className="sidebar-nav">
-          {sidebarItems.map(item => (
-            <button key={item.view} className={`sidebar-nav-item ${item.active ? "active" : ""}`} onClick={item.onClick}>
-              <item.icon size={18} />
-              <span>{item.label}</span>
-            </button>
-          ))}
+          <button className={`sidebar-nav-item ${view === "dashboard" ? "active" : ""}`} onClick={goDashboard}>
+            <BarChart3 size={18} /><span>Dashboard</span>
+          </button>
+          <button className={`sidebar-nav-item ${view === "profiles" || view === "profile" ? "active" : ""}`} onClick={() => { setView("profiles"); setActiveProfile(null); setSidebarOpen(false); }}>
+            <Users size={18} /><span>Profiles</span>
+          </button>
+          <button className={`sidebar-nav-item ${view === "settings" ? "active" : ""}`} onClick={() => { setView("settings"); setSidebarOpen(false); }}>
+            <Settings size={18} /><span>Settings</span>
+          </button>
+          {/* Profile sub-tabs */}
+          {view === "profile" && activeProfile && (
+            <>
+              <div style={{ height: 1, background: "#e2e8f0", margin: "8px 16px" }} />
+              <div style={{ padding: "4px 16px 8px", fontSize: "0.7em", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                {activeProfile.profile.name}
+              </div>
+              {profileTabs.map(t => (
+                <button key={t.key} className={`sidebar-nav-item ${profileTab === t.key ? "active" : ""}`} onClick={() => selectTab(t.key)}>
+                  <t.icon size={17} /><span>{t.label}</span>
+                </button>
+              ))}
+            </>
+          )}
           <button className="sidebar-nav-item logout" onClick={onLogout}>
             <LogOut size={18} /> <span>Logout</span>
           </button>
@@ -198,7 +234,7 @@ function AppShell({ user, children: initialChildren, onLogout }: {
             <button className="hamburger" onClick={() => setSidebarOpen(true)}><Menu size={24} /></button>
             <h1>
               {view === "profile" && activeProfile ? (
-                <><button onClick={goBack} style={{ background: "none", border: "none", fontSize: "1em", cursor: "pointer", padding: 0, marginRight: 8, display: "inline-flex", alignItems: "center" }}><ArrowLeft size={20} /></button>{activeProfile.profile.name}</>
+                <>{activeProfile.profile.name}</>
               ) : view === "dashboard" ? "Dashboard" : view === "profiles" ? "Profiles" : "Settings"}
             </h1>
           </div>
@@ -207,7 +243,7 @@ function AppShell({ user, children: initialChildren, onLogout }: {
         {view === "dashboard" && <DashboardView overview={overview} user={user} openProfile={openProfile} refresh={refreshChildren} childList={childList} />}
         {view === "profiles" && <ProfilesView user={user} childList={childList} openProfile={openProfile} />}
         {view === "profile" && activeProfile && (
-          <ProfileView data={activeProfile} openProfile={openProfile} refreshChildren={refreshChildren} childList={childList} />
+          <ProfileView data={activeProfile} profileTab={profileTab} openProfile={openProfile} refreshChildren={refreshChildren} childList={childList} />
         )}
         {view === "settings" && <SettingsView user={user} childList={childList} refresh={refreshChildren} />}
       </div>
@@ -345,20 +381,49 @@ function ProfilesView({ user, childList, openProfile }: {
 
 // ═══════════ PROFILE VIEW ══════════════════════════════
 
-function ProfileView({ data, openProfile, refreshChildren, childList }: {
-  data: ProfileData; openProfile: (type: "mom" | "child", childId?: number) => void;
+function ProfileView({ data, profileTab, openProfile, refreshChildren, childList }: {
+  data: ProfileData; profileTab: string; openProfile: (type: "mom" | "child", childId?: number) => void;
   refreshChildren: () => void; childList: Child[];
 }) {
-  const d = data.dashboard || {};
+  const [d, setD] = useState(data.dashboard || {});
   const isMom = data.type === "mom";
+  const profileId = data.profile?.id;
+  const [milestoneChecklist, setMilestoneChecklist] = useState<Record<string, string[]>>({});
+  const tab = profileTab;
 
-  const MOM_TABS = ["home", "cycle", "precon", "pregnancy", "postpartum"] as const;
-  const CHILD_TABS = ["home", "feed", "sleep", "growth", "diaper", "temp", "vax", "milestones"] as const;
-  const tabs = isMom ? MOM_TABS : CHILD_TABS;
-  type Tab = typeof tabs[number];
-  const [tab, setTab] = useState<Tab>("home");
+  // Refresh dashboard data
+  const refreshDashboard = useCallback(async () => {
+    const url = isMom ? "profile/mom/dashboard" : `profile/child/${profileId}/dashboard`;
+    const r = await api(url);
+    if (!r.error) setD(r);
+  }, [isMom, profileId]);
 
-  // ─── Mom form states ───────────────────
+  // Load milestone checklist
+  useEffect(() => {
+    if (!isMom) {
+      api("baby/milestones/checklist").then(r => {
+        if (r.checklist) setMilestoneChecklist(r.checklist);
+      });
+    }
+  }, [isMom]);
+
+  // Calculate child's age in months for milestone filtering
+  const childAgeMonths = !isMom && data.profile?.birth_date
+    ? Math.floor((new Date().getTime() - new Date(data.profile.birth_date).getTime()) / (1000 * 60 * 60 * 24 * 30.44))
+    : null;
+
+  const getEligibleMilestones = (): string[] => {
+    if (!childAgeMonths || !milestoneChecklist) return [];
+    const eligible: string[] = [];
+    for (const [range, milestones] of Object.entries(milestoneChecklist)) {
+      const [min, max] = range.replace("_months", "").split("-").map(Number);
+      if (childAgeMonths >= (min || 0) && childAgeMonths <= (max || 99)) {
+        eligible.push(...milestones);
+      }
+    }
+    return eligible;
+  };
+  const cname = isMom ? "" : (data.profile?.name || "");
   const [cyStart, setCyStart] = useState(""); const [cyEnd, setCyEnd] = useState(""); const [cyFlow, setCyFlow] = useState("medium"); const [cySymp, setCySymp] = useState("");
   const [cyMsg, setCyMsg] = useState(""); const [cySave, setCySave] = useState(false);
   const [sNm, setSNm] = useState(""); const [sDs, setSDs] = useState(""); const [sMsg, setSMsg] = useState(""); const [sSave, setSSave] = useState(false);
@@ -411,13 +476,12 @@ function ProfileView({ data, openProfile, refreshChildren, childList }: {
   const [msMsg, setMsMsg] = useState(""); const [msSave, setMsSave] = useState(false);
 
   // ─── Helper ──────────────────────────────
-  const cname = isMom ? "" : (data.profile?.name || "");
 
   const save = async (url: string, body: any, setMsg: (m: string) => void, setSave: (v: boolean) => void, onSuccess?: () => void) => {
     setSave(true); setMsg("");
     const r = await api(url, { method: "POST", body: JSON.stringify(body) });
     setMsg(r.error || "Saved!");
-    if (!r.error) onSuccess?.();
+    if (!r.error) { onSuccess?.(); refreshDashboard(); }
     setSave(false);
   };
 
@@ -452,18 +516,6 @@ function ProfileView({ data, openProfile, refreshChildren, childList }: {
 
   return (
     <div>
-      {/* Tab bar */}
-      <div className="toggle-group" style={{ marginBottom: 16, flexWrap: "wrap" }}>
-        {tabs.map(t => {
-          const Icon = tabIcons[t] || Home;
-          return (
-            <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)} style={{ fontSize: "0.82em", padding: "8px 12px", display: "flex", alignItems: "center", gap: 6 }}>
-              <Icon size={16} /> {tabLabels[t]}
-            </button>
-          );
-        })}
-      </div>
-
       {/* ========== MOM HOME ========== */}
       {isMom && tab === "home" && (
         <div>
@@ -846,7 +898,7 @@ function ProfileView({ data, openProfile, refreshChildren, childList }: {
       {!isMom && tab === "milestones" && (
         <div>
           <div className="card">
-            <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><Target size={18} color="#f472b6" /> Milestone</h3>
+            <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}><Target size={18} color="#f472b6" /> Log Milestone</h3>
             <div className="input-group"><label>Name</label><input type="text" value={msN} onChange={e => setMsN(e.target.value)} /></div>
             <div className="row"><div className="input-group"><label>Category</label><select value={msCat} onChange={e => setMsCat(e.target.value)}><option value="motor">Motor</option><option value="cognitive">Cognitive</option><option value="social">Social</option><option value="language">Language</option></select></div>
               <div className="input-group"><label>Expected (mo)</label><input type="number" value={msAge} onChange={e => setMsAge(e.target.value)} /></div></div>
@@ -854,6 +906,30 @@ function ProfileView({ data, openProfile, refreshChildren, childList }: {
             {msMsg && msgBox(msMsg)}
             <button className="btn btn-primary" onClick={() => save("milestones", { milestone: msN, category: msCat, expected_age_months: msAge ? parseInt(msAge) : null, achieved_date: msDate || null, child_name: cname }, setMsMsg, setMsSave, () => setMsN(""))} disabled={msSave}><Save size={14} /> Save</button>
           </div>
+          {/* Age-based checklist */}
+          {childAgeMonths !== null && (
+            <div className="card">
+              <h3 style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Target size={16} color="#10b981" /> Milestones for {childAgeMonths} months
+              </h3>
+              <p style={{ color: "#94a3b8", fontSize: "0.8em", marginBottom: 12 }}>
+                Based on baby's birth date ({data.profile.birth_date}). Tap to log.
+              </p>
+              {getEligibleMilestones().length === 0 ? (
+                <p style={{ color: "#94a3b8", fontSize: "0.85em" }}>No checklist data for this age range yet.</p>
+              ) : (
+                getEligibleMilestones().map((m, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 0", borderBottom: "1px solid #f1f5f9", cursor: "pointer" }}
+                    onClick={() => { setMsN(m); }}>
+                    <div style={{ width: 28, height: 28, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Plus size={14} color="#16a34a" />
+                    </div>
+                    <span style={{ fontSize: "0.85em", color: "#1e293b" }}>{m}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
