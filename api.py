@@ -195,6 +195,16 @@ def add_child():
     child = db.execute("SELECT * FROM children WHERE id=?",(cid,)).fetchone()
     return jsonify(dict(child)), 201
 
+@app.route("/api/children/<int:child_id>", methods=["DELETE"])
+@auth_required
+def delete_child(child_id):
+    db = get_db()
+    child = db.execute("SELECT * FROM children WHERE id=? AND user_id=?",(child_id,g.user_id)).fetchone()
+    if not child: return jsonify({"error":"Not found"}), 404
+    db.execute("DELETE FROM children WHERE id=?",(child_id,))
+    db.commit()
+    return jsonify({"ok":True})
+
 # ─── Feedings ──────────────────────────────────────────────────────────────────
 
 @app.route("/api/feedings", methods=["GET"])
