@@ -470,6 +470,7 @@ function ProfileView({ data, profileTab, openProfile, refreshChildren, childList
   const [tMsg, setTMsg] = useState(""); const [tSave, setTSave] = useState(false);
   const [vNm, setVNm] = useState(""); const [vDate, setVDate] = useState("");
   const [vDose, setVDose] = useState("1"); const [vAdmin, setVAdmin] = useState("");
+  const [vImageUrl, setVImageUrl] = useState("");
   const [vMsg, setVMsg] = useState(""); const [vSave, setVSave] = useState(false);
   const [msN, setMsN] = useState(""); const [msCat, setMsCat] = useState("motor");
   const [msAge, setMsAge] = useState(""); const [msDate, setMsDate] = useState("");
@@ -880,8 +881,26 @@ function ProfileView({ data, profileTab, openProfile, refreshChildren, childList
             <div className="row"><div className="input-group"><label>Date</label><input type="date" value={vDate} onChange={e => setVDate(e.target.value)} /></div>
               <div className="input-group"><label>Dose #</label><input type="number" min="1" value={vDose} onChange={e => setVDose(e.target.value)} /></div></div>
             <div className="input-group"><label>Admin Date</label><input type="date" value={vAdmin} onChange={e => setVAdmin(e.target.value)} /></div>
+            <div className="input-group">
+              <label>Photo of vaccination card</label>
+              <input type="file" accept="image/*" onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setVSave(true); setVMsg("Uploading...");
+                const form = new FormData(); form.append("file", file);
+                try {
+                  const token = localStorage.getItem("token");
+                  const r = await fetch("http://173.249.10.236:5003/api/upload", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+                  const data = await r.json();
+                  if (data.url) { setVImageUrl(data.url); setVMsg("✅ Photo uploaded!"); }
+                  else setVMsg(data.error || "Upload failed");
+                } catch { setVMsg("Upload failed"); }
+                setVSave(false);
+              }} style={{ fontSize: "0.85em", marginTop: 4 }} />
+              {vImageUrl && <p style={{ fontSize: "0.8em", color: "#10b981", marginTop: 4 }}>Photo ready</p>}
+            </div>
             {vMsg && msgBox(vMsg)}
-            <button className="btn btn-primary" onClick={() => save("vaccinations", { vaccine_name: vNm, scheduled_date: vDate, administered_date: vAdmin || null, dose_number: parseInt(vDose) || 1, child_name: cname }, setVMsg, setVSave, () => { setVNm(""); setVDate(""); setVAdmin(""); })} disabled={vSave}><Save size={14} /> Save</button>
+            <button className="btn btn-primary" onClick={() => save("vaccinations", { vaccine_name: vNm, scheduled_date: vDate, administered_date: vAdmin || null, dose_number: parseInt(vDose) || 1, child_name: cname, image_url: vImageUrl }, setVMsg, setVSave, () => { setVNm(""); setVDate(""); setVAdmin(""); setVImageUrl(""); })} disabled={vSave}><Save size={14} /> Save</button>
           </div>
           {(d.upcoming_vaccines || []).map((v: any) => (
             <div className="card" key={v.id} style={{ padding: 10, opacity: v.administered_date ? 0.5 : 1 }}>
@@ -889,6 +908,11 @@ function ProfileView({ data, profileTab, openProfile, refreshChildren, childList
                 <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Syringe size={14} color={v.administered_date ? "#10b981" : "#f59e0b"} /> {v.vaccine_name} (D{v.dose_number})</span>
                 <span style={{ color: "#94a3b8", display: "flex", alignItems: "center", gap: 4 }}>{v.administered_date ? <><CheckCircle size={12} color="#10b981" /> {v.administered_date}</> : <><Calendar size={12} /> {v.scheduled_date}</>}</span>
               </div>
+              {v.image_url && (
+                <img src={`http://173.249.10.236:5003${v.image_url}`} alt="Vaccination card"
+                  style={{ width: "100%", maxHeight: 200, objectFit: "contain", marginTop: 8, borderRadius: 8, cursor: "pointer" }}
+                  onClick={() => window.open(`http://173.249.10.236:5003${v.image_url}`, "_blank")} />
+              )}
             </div>
           ))}
         </div>
