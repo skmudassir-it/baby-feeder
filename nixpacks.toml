@@ -1,0 +1,8 @@
+# Added by Hermes migration (2026-08-04)
+# 1) Use `npm install` instead of strict `npm ci` to match Vercel build behavior.
+# 2) Pin Node 20 (Next.js >= 20.9.0 requirement) via NIXPACKS_NODE_VERSION.
+[phases.install]
+commands = ["npm install --no-audit --no-fund"]
+
+[variables]
+NIXPACKS_NODE_VERSION = "20"
